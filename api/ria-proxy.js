@@ -19,9 +19,11 @@ export default async function handler(req, res) {
         // This is a request for a media segment
         const segmentName = new URLSearchParams(queryString).get('segment');
         targetUrl = BASE_URL + segmentName;
+        console.log(`Proxying segment: ${targetUrl}`); // Log for debugging
     } else {
         // This is a request for the main manifest
         targetUrl = MANIFEST_URL;
+        console.log(`Proxying manifest: ${targetUrl}`); // Log for debugging
     }
 
     try {
@@ -31,24 +33,18 @@ export default async function handler(req, res) {
             }
         });
 
-        // If the original server responded with an error, forward that error
         if (!response.ok) {
             console.error(`Error from target server: ${response.status} ${response.statusText}`);
             return res.status(response.status).send(`Error from target server: ${response.statusText}`);
         }
 
-        // Get content type from the original response to forward it
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        
-        // Get the data as an ArrayBuffer to handle both text (manifest) and binary (segments)
         const data = await response.arrayBuffer();
 
-        // Set headers for the response to the player
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'no-store, max-age=0');
         
-        // Send the data back to the player
         res.status(200).send(Buffer.from(data));
     } catch (error) {
         console.error('Proxy error:', error);
