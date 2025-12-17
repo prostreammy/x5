@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         const response = await fetch(targetUrl, {
             headers: {
                 // This specific User-Agent is crucial for this source
-                'User-Agent': 'Mozilla/5.0 v3 (Linux; Android 9)'
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
             }
         });
 
@@ -29,3 +29,4 @@ export default async function handler(req, res) {
         res.status(500).send("Error proxying the manifest");
     }
 }
+
