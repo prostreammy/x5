@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    const targetUrl = "https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_r92bmh1k&password=yb3IpqrB&channel=riafhd";
+    const targetUrl = "https://load.perfecttv.net/mpd/ria/manifest.mpd?username=vip_r32bmh1k&password=yb7IpqrB&channel=riafhd";
 
     try {
         const response = await fetch(targetUrl, {
