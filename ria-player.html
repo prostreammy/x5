@@ -3,26 +3,64 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RIA TV Player</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
-        body { 
-            background: #000; 
-            margin: 0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            font-family: Arial, sans-serif;
+        /* Full-screen layout for TV and Mobile */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            overflow: hidden; /* Prevents scrollbars */
         }
+
+        /* Container to center the video */
         .video-container {
-            width: 90%;
-            max-width: 900px;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        video { 
-            width: 100%; 
-            background: #000; 
+
+        /* Video element to fill the container while maintaining aspect ratio */
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures the video is not stretched or cropped */
+        }
+        
+        /* --- Shaka Player UI Customizations for TV/Mobile --- */
+
+        /* Make the control bar larger and more accessible */
+        .shaka-controls-button-panel {
+            font-size: 24px; /* Larger icons */
+        }
+        
+        /* Increase the size of each button for better touch/remote targets */
+        .shaka-controls-button-panel > button {
+            padding: 12px;
+            margin: 0 8px;
+        }
+
+        /* Style the bottom controls bar for better visibility */
+        .shaka-bottom-controls {
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+            padding-bottom: 2em; /* Add space from the edge of the screen */
+        }
+
+        /* Ensure the overflow menu is also styled consistently */
+        .shaka-overflow-menu {
+            font-size: 18px;
+        }
+
+        /* As a fallback, hide any element that might be a seek bar */
+        .shaka-seek-bar-container {
+            display: none !important;
         }
     </style>
 </head>
@@ -45,8 +83,28 @@
             if (shaka.Player.isBrowserSupported()) {
                 const video = document.getElementById('video');
                 player = new shaka.Player(video);
-                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
                 
+                // Configure the Shaka Player UI
+                const ui = new shaka.ui.Overlay(player, video.parentElement, video);
+
+                // This is the key part for creating a TV/Mobile-friendly UI
+                ui.configure({
+                    // We explicitly define which controls to show, removing the seek bar.
+                    controlPanelElements: [
+                        'play_pause',
+                        'volume',
+                        'fullscreen'
+                    ],
+                    // Add a large, centered play button for better UX
+                    addBigPlayButton: true,
+                    // Configure the overflow menu (three dots) for essential settings
+                    overflowMenuButtons: [
+                        'quality',
+                        'language',
+                        'caption'
+                    ]
+                });
+
                 player.configure({
                     streaming: {
                         bufferingGoal: 30,
