@@ -87,12 +87,13 @@
                 // Configure the Shaka Player UI
                 const ui = new shaka.ui.Overlay(player, video.parentElement, video);
 
-                // This is the key part for creating a TV/Mobile-friendly UI
+                // Configure a minimal UI for TV/Mobile
                 ui.configure({
-                    // We explicitly define which controls to show, removing the seek bar.
+                    // Define the minimal controls to show on the main bar.
+                    // 'volume' is removed, 'overflow_menu' is added.
                     controlPanelElements: [
                         'play_pause',
-                        'volume',
+                        'overflow_menu',
                         'fullscreen'
                     ],
                     // Add a large, centered play button for better UX
