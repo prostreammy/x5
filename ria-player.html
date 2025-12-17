@@ -4,9 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>RIA TV Player</title>
-    <!-- Shaka Player UI compiled library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.ui.js"></script>
-    <!-- Shaka Player CSS compiled library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/controls.css">
     <style>
         body { 
@@ -18,7 +16,6 @@
             height: 100vh; 
             font-family: Arial, sans-serif;
         }
-        /* The container for the video and controls */
         .video-container {
             width: 90%;
             max-width: 900px;
@@ -31,9 +28,7 @@
 </head>
 <body>
     <div class="video-container">
-        <!-- The data-shaka-player-container attribute enables the UI -->
         <div data-shaka-player-container>
-            <!-- The data-shaka-player attribute will automatically load the player -->
             <video id="video" data-shaka-player autoplay></video>
         </div>
     </div>
@@ -41,63 +36,52 @@
     <script>
         // Hardcoded paths for the RIA stream
         const PROXY_PATH = '/api/ria-proxy';
-        const REAL_SOURCE_BASE = "https://load.perfecttv.net/mpd/ria/";
 
         let player;
 
         async function initApp() {
-            // Install shaka polyfills
             shaka.polyfill.installAll();
 
-            // Check if browser is supported
             if (shaka.Player.isBrowserSupported()) {
-                // Get the video element
                 const video = document.getElementById('video');
-                
-                // Create a new player
                 player = new shaka.Player(video);
-
-                // Attach the UI to the player
                 const ui = new shaka.ui.Overlay(player, video.parentElement, video);
                 
-                // Configure player
                 player.configure({
                     streaming: {
-                        bufferingGoal: 30, // Buffer 30 seconds ahead
+                        bufferingGoal: 30,
                     },
                     manifest: {
                         dash: { autoCorrectDrift: true }
                     }
                 });
 
-                // This is the key part: intercept network requests
+                // This is the key part: intercept ALL network requests
                 player.getNetworkingEngine().registerRequestFilter((type, request) => {
                     // For the manifest request, point it to our proxy
                     if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
                         request.uris = [PROXY_PATH];
                     } 
-                    // For segment requests, rewrite the URL to go through our proxy
+                    // For ALL other requests (like segments), rewrite them to go through our proxy
                     else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
-                        let uri = request.uris[0];
+                        // The URI might be relative or absolute. We just need the filename.
+                        const uri = request.uris[0];
+                        const fileName = uri.substring(uri.lastIndexOf('/') + 1);
                         
-                        // Check if the segment URI is from the original server
-                        if (uri.startsWith(REAL_SOURCE_BASE)) {
-                            // Get the filename of the segment
-                            const fileName = uri.split('/').pop();
-                            
-                            // Rewrite the URI to point to our proxy with the filename as a query param
-                            request.uris = [`${PROXY_PATH}?segment=${fileName}`];
-                        }
+                        // Log the change for debugging
+                        console.log(`Filtering segment: ${uri} -> ${PROXY_PATH}?segment=${fileName}`);
+                        
+                        // Rewrite the URI to point to our proxy with the filename as a query param
+                        request.uris = [`${PROXY_PATH}?segment=${fileName}`];
                     }
                 });
 
-                // Load the stream
+                // Load the stream using the proxy path
                 try {
                     await player.load(PROXY_PATH);
                     console.log('RIA stream loaded successfully!');
                 } catch (error) {
                     console.error('Error loading stream:', error);
-                    // Display a user-friendly error message
                     document.querySelector('.video-container').innerHTML = `
                         <div style="color: white; text-align: center;">
                             <h2>Error Loading Stream</h2>
@@ -117,7 +101,6 @@
             }
         }
 
-        // Initialize the application when the page is loaded
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
