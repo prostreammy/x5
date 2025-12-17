@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-Source Shaka Player</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
+    <style>
+        body { 
+            background: #000; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        select, button {
+            padding: 8px 15px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        select:hover, button:hover {
+            background: #555;
+        }
+        video { 
+            width: 100%; 
+            max-width: 1000px; 
+            background: #000; 
+            outline: none; 
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <select id="sourceSelect">
+            <option value="bola1">Bola 1</option>
+            <option value="ria">RIA</option>
+        </select>
+        <button id="loadButton">Load Source</button>
+    </div>
+    
+    <video id="video" controls autoplay></video>
+    <div id="status" class="status">Ready to load</div>
+
+    <script>
+        // Configuration for different sources
+        const sources = {
+            bola1: {
+                proxyPath: "/api/proxy",
+                realSourceBase: "https://load.perfecttv.net/mpd/bola1/",
+                manifestName: "manifest.mpd"
+            },
+            ria: {
+                proxyPath: "/api/ria-proxy",
+                realSourceBase: "https://load.perfecttv.net/mpd/ria/",
+                manifestName: "manifest.mpd"
+            }
+        };
+
+        let currentSource = "bola1";
+        let player;
+
+        async function initApp() {
+            shaka.polyfill.installAll();
+            if (shaka.Player.isBrowserSupported()) {
+                const video = document.getElementById('video');
+                player = new shaka.Player(video);
+                
+                player.configure({
+                    streaming: {
+                        bufferingGoal: 15,
+                        rebufferingGoal: 3,
+                        bufferBehind: 30,
+                    },
+                    manifest: {
+                        dash: { autoCorrectDrift: true }
+                    }
+                });
+
+                // Add event listeners
+                document.getElementById('loadButton').addEventListener('click', loadSource);
+                document.getElementById('sourceSelect').addEventListener('change', (e) => {
+                    currentSource = e.target.value;
+                    updateStatus(`Source changed to ${e.target.options[e.target.selectedIndex].text}`);
+                });
+
+                // Load the default source
+                loadSource();
+            } else {
+                console.error('Browser not supported!');
+                updateStatus('Error: Browser not supported!');
+            }
+        }
+
+        function loadSource() {
+            const source = sources[currentSource];
+            updateStatus(`Loading ${currentSource}...`);
+            
+            // Set up request filter for the current source
+            player.getNetworkingEngine().clearAllRequestFilters();
+            player.getNetworkingEngine().registerRequestFilter((type, request) => {
+                if (type === shaka.net.NetworkingEngine.RequestType.MANIFEST) {
+                    request.uris = [source.proxyPath];
+                } else if (type === shaka.net.NetworkingEngine.RequestType.SEGMENT) {
+                    // This forces every segment request to go to the REAL server
+                    let uri = request.uris[0];
+                    if (uri.includes(window.location.hostname) || !uri.startsWith('http')) {
+                        const fileName = uri.split('/').pop();
+                        request.uris = [source.realSourceBase + fileName];
+                    }
+                }
+            });
+
+            // Load the manifest
+            player.load(source.manifestName)
+                .then(() => {
+                    console.log('Player loaded successfully');
+                    updateStatus(`Successfully loaded ${currentSource}`);
+                })
+                .catch(e => {
+                    console.error('Error loading manifest:', e);
+                    updateStatus(`Error loading ${currentSource}: ${e.message}`);
+                });
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
